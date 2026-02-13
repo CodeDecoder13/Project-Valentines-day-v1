@@ -241,6 +241,16 @@ body {
   animation: burst 0.6s ease-out forwards;
 }
 
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 50%, 90% { transform: translateX(-6px); }
+  30%, 70% { transform: translateX(6px); }
+}
+
 /* ── Radial Glow ────────────────────────────────────── */
 .hero-glow {
   background: radial-gradient(
