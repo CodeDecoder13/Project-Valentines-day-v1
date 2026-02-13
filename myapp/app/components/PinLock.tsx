@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { getCookie, setCookie } from "../hooks/useCookies";
 
-const CORRECT_PIN = "060606";
+const CORRECT_PIN = "090401";
 const PIN_LENGTH = 6;
 const UNLOCK_COOKIE = "valentine_unlocked";
 
