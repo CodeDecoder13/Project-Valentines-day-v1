@@ -2,12 +2,13 @@
 
 import { useState, useCallback, useEffect } from "react";
 import ScrollReveal from "./ScrollReveal";
+import { getCookie, setCookie } from "../hooks/useCookies";
+import { hasConsent } from "./CookieConsent";
 
 // ─── Web3Forms Config ───────────────────────────────
-// 1. Go to https://web3forms.com
-// 2. Enter YOUR email and get your access key
-// 3. Paste it below
 const WEB3FORMS_ACCESS_KEY = "06e51d7d-3a2d-4af1-a1a2-2d73a62ec92b";
+
+const VALENTINE_COOKIE = "valentine_accepted";
 
 const dodgeStages = [
   { text: "No", emoji: "" },
@@ -23,6 +24,9 @@ const dodgeStages = [
 ];
 
 function sendValentineNotification(dodgeAttempts: number) {
+  // Only send if user accepted cookies
+  if (!hasConsent()) return;
+
   const now = new Date();
   const timestamp = now.toLocaleString("en-US", {
     dateStyle: "full",
@@ -46,13 +50,22 @@ function sendValentineNotification(dodgeAttempts: number) {
       ].join("\n"),
     }),
   }).catch(() => {
-    // Silently fail — don't ruin the celebration
+    // Silently fail
   });
 }
 
 export default function ValentineAsk() {
   const [accepted, setAccepted] = useState(false);
   const [dodgeCount, setDodgeCount] = useState(0);
+  const [loaded, setLoaded] = useState(false);
+
+  // Restore acceptance state from cookie on mount
+  useEffect(() => {
+    if (getCookie(VALENTINE_COOKIE) === "yes") {
+      setAccepted(true);
+    }
+    setLoaded(true);
+  }, []);
 
   const handleDodge = useCallback(() => {
     setDodgeCount((prev) => Math.min(prev + 1, dodgeStages.length - 1));
@@ -60,14 +73,19 @@ export default function ValentineAsk() {
 
   const handleAccept = useCallback(() => {
     setAccepted(true);
+    // Persist in cookie if consent was given
+    if (hasConsent()) {
+      setCookie(VALENTINE_COOKIE, "yes", 365);
+    }
     sendValentineNotification(dodgeCount);
   }, [dodgeCount]);
 
   const stage = dodgeStages[dodgeCount];
-  // Yes button grows but capped for mobile
-  const yesScale = Math.min(1 + dodgeCount * 0.08, 1.6);
-  // No button shrinks with each dodge
-  const noScale = Math.max(1 - dodgeCount * 0.06, 0.55);
+  const yesScale = Math.min(1 + dodgeCount * 0.06, 1.4);
+  const noScale = Math.max(1 - dodgeCount * 0.05, 0.6);
+
+  // Don't render until we've checked the cookie to avoid flicker
+  if (!loaded) return null;
 
   if (accepted) {
     return (
@@ -95,12 +113,10 @@ export default function ValentineAsk() {
             Happy Valentine&apos;s Day, my love!
           </p>
 
-          {/* Emoji celebration */}
           <p className="mt-6 text-3xl sm:text-4xl">
             {"\u{1F389}\u{1F495}\u{2728}\u{1F970}\u{2728}\u{1F495}\u{1F389}"}
           </p>
 
-          {/* Heart burst */}
           <div className="relative mt-8 h-40 w-40">
             {Array.from({ length: 16 }).map((_, i) => (
               <span
@@ -140,7 +156,6 @@ export default function ValentineAsk() {
             I have an important question for you...
           </p>
 
-          {/* Reaction emoji that changes per dodge */}
           {dodgeCount > 0 && (
             <p className="mb-8 text-4xl sm:text-5xl transition-all duration-300" key={dodgeCount}>
               {stage.emoji}
@@ -150,33 +165,36 @@ export default function ValentineAsk() {
         </ScrollReveal>
 
         <ScrollReveal delay={300}>
-          <div className="relative flex min-h-[140px] flex-wrap items-center justify-center gap-4 sm:gap-6 overflow-hidden">
-            {/* Yes button — grows with each dodge */}
+          <div className="relative flex min-h-[180px] flex-col items-center justify-center gap-6">
+            {/* Yes button */}
             <button
               onClick={handleAccept}
-              className="animate-pulse-glow cursor-pointer rounded-full font-playfair font-bold transition-all duration-500 hover:scale-110"
+              className="animate-pulse-glow cursor-pointer rounded-full font-playfair font-bold transition-all duration-500 hover:brightness-110"
               style={{
                 backgroundColor: "#ff2d55",
                 color: "#fff0f3",
                 transform: `scale(${yesScale})`,
-                padding: `${14 + dodgeCount}px ${32 + dodgeCount * 2}px`,
-                fontSize: `${18 + dodgeCount}px`,
+                padding: "14px 36px",
+                fontSize: `${18 + dodgeCount * 0.5}px`,
                 zIndex: 10,
               }}
             >
               Yes! &#10084;
             </button>
 
-            {/* Dodging No button */}
-            <DodgeButton
-              text={stage.text}
-              scale={noScale}
-              onDodge={handleDodge}
-              dodgeCount={dodgeCount}
-            />
+            {/* No button in its own space so it doesn't overlap */}
+            <div className="relative h-16 w-full">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <DodgeButton
+                  text={stage.text}
+                  scale={noScale}
+                  onDodge={handleDodge}
+                  dodgeCount={dodgeCount}
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Hint text after a few dodges */}
           {dodgeCount >= 3 && (
             <p
               className="font-lora mt-8 text-xs sm:text-sm italic transition-all duration-300"
@@ -217,7 +235,6 @@ function DodgeButton({
   }, []);
 
   const dodge = useCallback(() => {
-    // Smaller dodge range on mobile so button stays visible
     const baseRange = isMobile ? 100 : 200;
     const increment = isMobile ? 15 : 30;
     const range = baseRange + dodgeCount * increment;

@@ -5,6 +5,7 @@ import ReasonsSection from "./components/ReasonsSection";
 import GallerySection from "./components/GallerySection";
 import ValentineAsk from "./components/ValentineAsk";
 import FooterSection from "./components/FooterSection";
+import CookieConsent from "./components/CookieConsent";
 
 export default function Home() {
   return (
@@ -18,6 +19,7 @@ export default function Home() {
         <ValentineAsk />
       </main>
       <FooterSection />
+      <CookieConsent />
     </>
   );
 }
